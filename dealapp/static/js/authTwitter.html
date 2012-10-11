@@ -1,0 +1,180 @@
+<head>
+	<script type="text/javascript" src="jsOAuth-1.3.4.js"></script>
+	<script type="text/javascript" src="jquery-1.7.2.js"></script>
+	<script type="text/javascript">
+		var limit = 600;
+		var count;
+		var results;
+		var timer;
+		
+		$(document).ready(function () {
+            $("#loading-div-background").css({ opacity: 0.8 });
+        });
+		
+		$.ajaxSetup({
+		      "error":function() { alert("error");  }
+		});
+		
+		function searchTwitter() {
+			var textField = document.getElementById('query');
+			var text = textField.value;
+			if(text.replace(/ /gi, "") == "") {
+				alert('Preencha o campo de busca.');
+			} else {
+				showProgressAnimation();
+				count = 0;
+				results = [];
+				clearTimeout(timer);
+				timer = setInterval(function(){
+					hideProgressAnimation();
+					clearTimeout(timer);
+					alert('Something went wrong, try again.');
+				}, 30000);
+				$.ajax({
+					  type: 'GET',
+					  url: "http://search.twitter.com/search.json?q=" + text + "&rpp=100",
+					  async: false,
+					  jsonpCallback: 'jsonCallback',
+					  contentType: "application/json",
+					  dataType: "jsonp",
+					  error: function(e) {
+					      alert("fail");
+		    		  },
+		    		  success: function(data) {
+		    			  count += data.results.length;
+		    			  results = results.concat(data.results);
+		    			  if(data.next_page) {
+		    			  	  if(count < limit) {
+		    				      nextPage(data.next_page);	
+		    				  } else {
+		    					  estimateBuzz(results);
+		    				  }
+		    				  
+		    			  } else {
+		    				  estimateBuzz(results);
+		    			  }
+		    		   }
+			    });	
+			}
+		}
+		
+		function handleResponse(data) {
+			count += data.results.length;
+			results = results.concat(data.results);
+			if(data.next_page) {
+				if(count < limit) {
+					nextPage(data.next_page);	
+				} else {
+					estimateBuzz(results);
+				}
+				
+			} else {
+				estimateBuzz(results);
+			}
+			
+		}
+		
+		function estimateBuzz(twitterData) {
+			console.log(twitterData);
+			clearTimeout(timer);
+			sum = 0;
+			for(index=0; index < twitterData.length-1; index++) {
+				var time = new Date(twitterData[index].created_at);
+				var time1 = new Date(twitterData[index+1].created_at);
+				sum += time.getTime() - time1.getTime();
+				console.log(index);
+			}
+			mean = sum/twitterData.length;
+			hideProgressAnimation();
+			alert('Estimated buzz is: '+ Math.round((1000*3600*24*30)/mean)+' tweets/month');
+		}
+		
+		function showProgressAnimation() {
+	           
+
+            $("#loading-div-background").show();
+
+        }
+		
+		function hideProgressAnimation() {
+	           
+
+            $("#loading-div-background").hide();
+
+        }
+		
+		function nextPage(url) {
+			$.ajax({
+				  type: 'GET',
+				  url: "http://search.twitter.com/search.json" + url,
+				  async: false,
+				  jsonpCallback: 'jsonCallback',
+				  contentType: "application/json",
+				  dataType: "jsonp",
+				  error: function(e) {
+				      alert("fail");
+	       			  //console.log(e.message);
+	       			  //try 2 more times. 
+	    		  },
+	    		  success: function(data) {
+	    			  count += data.results.length;
+	    			  results = results.concat(data.results);
+	    			  if(data.next_page) {
+	    			  	  if(count < limit) {
+	    				      nextPage(data.next_page);	
+	    				  } else {
+	    					  estimateBuzz(results);
+	    				  }
+	    				  
+	    			  } else {
+	    				  estimateBuzz(results);
+	    			  }
+	    		   }
+		    });
+		}
+		
+	</script>
+	<style type="text/css">
+		img:hover {
+			cursor: pointer;
+		}
+		#loading-div-background 
+	    {
+	        display:none;
+	        position:fixed;
+	        top:0;
+	        left:0;
+	        background:black;
+	        width:100%;
+	        height:100%;
+	    }
+	    #loading-div {
+			width: 300px;
+			height: 200px;
+			background-color: white;
+			text-align: center;
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -150px;
+			margin-top: -100px;
+			z-index: 1001;
+		}
+		.ui-corner-all, .ui-corner-bottom, .ui-corner-right, .ui-corner-br {
+			-moz-border-radius-bottomright: 4px/*{cornerRadius}*/;
+			-webkit-border-bottom-right-radius: 4px/*{cornerRadius}*/;
+			-khtml-border-bottom-right-radius: 4px/*{cornerRadius}*/;
+			border-bottom-right-radius: 4px/*{cornerRadius}*/;
+		}
+	</style>
+</head>
+<body>
+	Termo: <input type="text" id="query" />
+	<input type="button" value="Buscar no Twitter" onclick="searchTwitter()" />
+	<div id="loading-div-background">
+    <div id="loading-div" class="ui-corner-all" >
+      <img style="height:30px;margin:30px;" src="loading.gif" alt="Loading.."/>
+      <h2 style="color:gray;font-weight:normal;">Gathering data and estimating Buzz...</h2>
+     </div>
+</div>
+</body>

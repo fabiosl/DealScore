@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Facebook posts meter</title>
+		<script src="jquery.js"></script>
+		<style type="text/css">
+		img:hover {
+			cursor: pointer;
+		}
+		#loading-div-background 
+	    {
+	        display:none;
+	        position:fixed;
+	        top:0;
+	        left:0;
+	        background:black;
+	        width:100%;
+	        height:100%;
+	        opacity: 0.8;
+	    }
+	    #loading-div {
+			width: 300px;
+			height: 200px;
+			background-color: white;
+			text-align: center;
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			margin-left: -150px;
+			margin-top: -100px;
+			z-index: 1001;
+		}
+	</style>
+		<script>
+			var timer;
+		
+			function assessTerm(term){ //give the option to make an assessment considering the mean time between posts.
+				var limit = 300;
+				var url = 'https://graph.facebook.com/search?q='+encodeURIComponent(term)+'&type=post&locale=pt_BR&limit=' + limit;
+				console.log("requesting: " + url);
+				showProgressAnimation();
+				timer = setInterval(function(){
+					hideProgressAnimation();
+					clearTimeout(timer);
+					alert('Something went wrong. Please try again.');
+				}, 40000);
+				$.ajax({
+	   				type: 'GET',
+	    			url: url,
+	    			async: false,
+					jsonpCallback: 'jsonCallback',
+					contentType: "application/json",
+					dataType: 'jsonp',
+					error: function(e) {
+				    	alert("fail");
+	       				//console.log(e.message);
+	       				//try 2 more times. 
+	    			},
+	    			success: function(json) {
+	    				clearTimeout(timer);
+	    				hideProgressAnimation();
+	    				alert("Dataset: " + json.data.length + " posts")
+	    					var elapsedTimeSum = 0;
+	    					for (i=1; i<json.data.length; i++){
+  								var prevCreatedTime = getDateFromFBString(json.data[i-1].created_time);
+								var currentCreatedTime = getDateFromFBString(json.data[i].created_time);
+								var elapsedTimeBetweenPosts = Number(Number(prevCreatedTime.getTime()) - Number(currentCreatedTime.getTime()));						
+								elapsedTimeSum += elapsedTimeBetweenPosts;
+  							}
+							
+							var meanTimeBetweenPosts = elapsedTimeSum/json.data.length;
+							//alert("Mean Time between posts: " + meanTimeBetweenPosts)
+							
+							var assessment = Math.floor(2592000000/meanTimeBetweenPosts);
+							alert("You'll need around " + assessment + " posts per month")
+	    			}
+				});
+			}
+			
+			function printElapsedTime(elapsedTime){
+				var days=Math.floor(elapsedTime / 86400000);
+				var hours = Math.floor((elapsedTime - (days * 86400000 ))/3600000);
+				var minutes = Math.floor((elapsedTime - (days * 86400000 ) - (hours *3600000 ))/60);
+				var seconds = Math.floor((elapsedTime - (days * 86400000 ) - (hours *3600000 ) - (minutes*60)));
+				alert("Elapsed Time: " + days + "d " + hours + "h "+ minutes + "m " + seconds + "s ");
+			
+			}
+			
+			function getDateFromFBString(dateString){
+				//FB date comes like this: "2012-08-17T20:07:37+0000"
+				var date = new Date();
+				date.setDate(dateString.substring(8,10)); //Day
+				date.setMonth(dateString.substring(5,7));
+				date.setFullYear(dateString.substring(0,4));
+				date.setHours(dateString.substring(11,13));
+				date.setMinutes(dateString.substring(14,16));
+				date.setSeconds(dateString.substring(17,19));
+				return date;
+			}
+			
+			function showProgressAnimation() {
+            	$("#loading-div-background").show();
+
+        	}
+		
+			function hideProgressAnimation() {
+	            $("#loading-div-background").hide();
+	
+	        }
+		
+		</script>
+		
+	</head>
+
+	<body>
+		<input type="text" size="25">		
+		<button onclick="assessTerm($(this).prev().val())" >Analyze</button>
+		<div id="loading-div-background">
+	    <div id="loading-div" class="ui-corner-all" >
+	      <img style="height:30px;margin:30px;" src="loading.gif" alt="Loading.."/>
+	      <h2 style="color:gray;font-weight:normal;">Gathering data and estimating Buzz...</h2>
+	     </div>	
+	</body>
+</html>

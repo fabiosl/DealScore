@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Facebook posts meter</title>
+		<script src="jquery.js"></script>
+		
+		<script>
+			
+		
+			function assessTerm(term){ //give the option to make an assessment considering the mean time between posts.
+				var limit = 300;
+				var url = 'https://graph.facebook.com/search?q='+encodeURIComponent(term)+'&type=post&locale=pt_BR&limit=' + limit;
+				console.log("requesting: " + url);
+				$.ajax({
+	   				type: 'GET',
+	    			url: url,
+	    			async: false,
+					jsonpCallback: 'jsonCallback',
+					contentType: "application/json",
+					dataType: 'jsonp',
+					error: function(e) {
+				    	alert("fail");
+	       				//console.log(e.message);
+	       				//try 2 more times. 
+	    			},
+	    			success: function(json) {
+	    				alert(json.data.length)
+	    				if (json.data.length == limit){
+							var firstPostCreatedTime = getDateFromFBString(json.data[0].created_time);
+							var lastPostCreatedTime = getDateFromFBString(json.data[json.data.length - 1].created_time);
+							var elapsedTime = Number(Number(firstPostCreatedTime.getTime()) - Number(lastPostCreatedTime.getTime()));						
+							elapsedTime = elapsedTime/1000;
+							printElapsedTime(elapsedTime)
+							
+							var assessment = Math.floor((2592000/elapsedTime) * limit);
+							alert("You'll need around " + assessment + " posts per month")
+						} else {
+							alert("Tratar caso onde a amostra eh menor que o limite")
+						}
+	    			}
+				});
+			}
+			
+			function printElapsedTime(elapsedTime){
+				var days=Math.floor(elapsedTime / 86400);
+				var hours = Math.floor((elapsedTime - (days * 86400 ))/3600);
+				var minutes = Math.floor((elapsedTime - (days * 86400 ) - (hours *3600 ))/60);
+				var seconds = Math.floor((elapsedTime - (days * 86400 ) - (hours *3600 ) - (minutes*60)));
+				alert("Elapsed Time: " + days + "d " + hours + "h "+ minutes + "m " + seconds + "s ");
+			
+			}
+			
+			function getDateFromFBString(dateString){
+				//FB date comes like this: "2012-08-17T20:07:37+0000"
+				var date = new Date();
+				date.setDate(dateString.substring(8,10)); //Day
+				date.setMonth(dateString.substring(5,7));
+				date.setFullYear(dateString.substring(0,4));
+				date.setHours(dateString.substring(11,13));
+				date.setMinutes(dateString.substring(14,16));
+				date.setSeconds(dateString.substring(17,19));
+				return date;
+			}
+		</script>
+		
+	</head>
+
+	<body>
+	<input type="text" size="25">		
+	<button onclick="assessTerm($(this).prev().val())" >Analyze</button>	
+	</body>
+</html>
